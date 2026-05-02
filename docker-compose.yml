@@ -1,0 +1,18 @@
+services:
+  vid-view:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vid-view
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      BASE_VIDEO_FOLDER: /videos
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    volumes:
+      - type: bind
+        source: ${BASE_VIDEO_FOLDER}
+        target: /videos
+        read_only: true
+    restart: unless-stopped
