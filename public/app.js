@@ -12,6 +12,34 @@ const videoStage = document.querySelector(".video-stage");
 const startVideoSelect = document.getElementById("start-video-select");
 const applyStartBtn = document.getElementById("apply-start-btn");
 const toggleSidebarBtn = document.getElementById("toggle-sidebar-btn");
+const sidebarEl = document.getElementById("folder-sidebar");
+
+const mediaPlayer = window.Plyr
+    ? new window.Plyr(videoPlayer, {
+        autoplay: false,
+        fullscreen: {
+            enabled: false,
+            fallback: false,
+            iosNative: false
+        },
+        controls: [
+            "play-large",
+            "restart",
+            "rewind",
+            "play",
+            "fast-forward",
+            "progress",
+            "current-time",
+            "duration",
+            "mute",
+            "volume",
+            "captions",
+            "settings",
+            "pip",
+            "airplay"
+        ]
+    })
+    : null;
 
 const state = {
     selectedFolder: "",
@@ -20,10 +48,125 @@ const state = {
     currentIndex: 0,
     activeButton: null,
     folderTree: null,
-    expandedPaths: new Set([""])
+    expandedPaths: new Set([""]),
+    pendingScrollPath: null
 };
 
 let touchStartX = null;
+
+function getScrollBehavior() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
+function queueFolderIntoView(path) {
+    state.pendingScrollPath = path;
+}
+
+function queueExpandedChildrenIntoView(path) {
+    state.pendingScrollPath = {
+        path,
+        mode: "children"
+    };
+}
+
+function ensureSidebarElementVisible(element) {
+    if (!sidebarEl || !element) {
+        return;
+    }
+
+    const sidebarRect = sidebarEl.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const padding = 16;
+    const visibleTop = sidebarRect.top + padding;
+    const visibleBottom = sidebarRect.bottom - padding;
+
+    if (elementRect.top < visibleTop) {
+        sidebarEl.scrollTo({
+            top: sidebarEl.scrollTop - (visibleTop - elementRect.top),
+            behavior: getScrollBehavior()
+        });
+        return;
+    }
+
+    if (elementRect.bottom > visibleBottom) {
+        sidebarEl.scrollTo({
+            top: sidebarEl.scrollTop + (elementRect.bottom - visibleBottom),
+            behavior: getScrollBehavior()
+        });
+    }
+}
+
+function scrollFolderIntoView(path) {
+    if (!sidebarEl || path === null) {
+        return;
+    }
+
+    const targetPath = typeof path === "string" ? path : path.path;
+    const mode = typeof path === "string" ? "row" : path.mode;
+
+    const folderItems = folderTreeEl.querySelectorAll(".folder-item");
+    const targetItem = Array.from(folderItems).find((item) => item.dataset.folderPath === targetPath);
+    if (!targetItem) {
+        return;
+    }
+
+    if (mode === "children") {
+        const firstChildRow = targetItem.querySelector(".children:not(.collapsed) .folder-row");
+        if (firstChildRow) {
+            ensureSidebarElementVisible(firstChildRow);
+            return;
+        }
+    }
+
+    const targetRow = targetItem.querySelector(".folder-row");
+    const sidebarRect = sidebarEl.getBoundingClientRect();
+    const itemRect = targetItem.getBoundingClientRect();
+    const padding = 16;
+    const visibleTop = sidebarRect.top + padding;
+    const visibleBottom = sidebarRect.bottom - padding;
+    const maxVisibleHeight = sidebarRect.height - (padding * 2);
+
+    if (itemRect.height > maxVisibleHeight && targetRow) {
+        targetRow.scrollIntoView({
+            behavior: getScrollBehavior(),
+            block: "start",
+            inline: "nearest"
+        });
+        return;
+    }
+
+    if (itemRect.top < visibleTop) {
+        const offset = visibleTop - itemRect.top;
+        sidebarEl.scrollTo({
+            top: sidebarEl.scrollTop - offset,
+            behavior: getScrollBehavior()
+        });
+        return;
+    }
+
+    if (itemRect.bottom > visibleBottom) {
+        const offset = itemRect.bottom - visibleBottom;
+        sidebarEl.scrollTo({
+            top: sidebarEl.scrollTop + offset,
+            behavior: getScrollBehavior()
+        });
+    }
+}
+
+function flushPendingFolderScroll() {
+    if (state.pendingScrollPath === null) {
+        return;
+    }
+
+    const path = state.pendingScrollPath;
+    state.pendingScrollPath = null;
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            scrollFolderIntoView(path);
+        });
+    });
+}
 
 function setButtonsEnabled() {
     const hasVideos = state.videos.length > 0;
@@ -45,8 +188,16 @@ function setSidebarCollapsed(collapsed) {
 function showError(message) {
     emptyState.style.display = "grid";
     emptyState.textContent = message;
-    videoPlayer.removeAttribute("src");
-    videoPlayer.load();
+    if (mediaPlayer) {
+        mediaPlayer.stop();
+        mediaPlayer.source = {
+            type: "video",
+            sources: []
+        };
+    } else {
+        videoPlayer.removeAttribute("src");
+        videoPlayer.load();
+    }
     setButtonsEnabled();
     viewerCounter.textContent = "0 / 0";
     populateStartVideoOptions();
@@ -107,7 +258,7 @@ function applyStartSelection() {
 }
 
 function attemptAutoplay() {
-    const playbackPromise = videoPlayer.play();
+    const playbackPromise = mediaPlayer ? mediaPlayer.play() : videoPlayer.play();
     if (playbackPromise && typeof playbackPromise.catch === "function") {
         // Browsers may block autoplay depending on user-gesture rules.
         playbackPromise.catch(() => { });
@@ -121,8 +272,21 @@ function updateVideoDisplay(shouldAutoplay = false) {
     }
 
     const current = state.videos[state.currentIndex];
-    videoPlayer.src = current.url;
-    videoPlayer.load();
+    if (mediaPlayer) {
+        mediaPlayer.source = {
+            type: "video",
+            title: current.fileName,
+            sources: [
+                {
+                    src: current.url,
+                    type: current.mimeType
+                }
+            ]
+        };
+    } else {
+        videoPlayer.src = current.url;
+        videoPlayer.load();
+    }
 
     emptyState.style.display = "none";
     viewerSubtitle.textContent = current.fileName;
@@ -178,6 +342,7 @@ function toggleFolderExpanded(path) {
         state.expandedPaths.delete(path);
     } else {
         state.expandedPaths.add(path);
+        queueExpandedChildrenIntoView(path);
     }
 
     renderFolderTree();
@@ -186,28 +351,14 @@ function toggleFolderExpanded(path) {
 function makeFolderNode(node) {
     const container = document.createElement("div");
     container.className = "folder-item";
+    container.dataset.folderPath = node.path || "";
 
     const row = document.createElement("div");
     row.className = "folder-row";
 
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const nodePath = node.path || "";
-
-    if (hasChildren) {
-        const toggle = document.createElement("button");
-        toggle.type = "button";
-        toggle.className = "folder-toggle";
-        toggle.setAttribute("aria-label", `Toggle folder ${node.name}`);
-        const isExpanded = state.expandedPaths.has(nodePath);
-        toggle.textContent = isExpanded ? "▾" : "▸";
-        toggle.addEventListener("click", () => toggleFolderExpanded(nodePath));
-        row.appendChild(toggle);
-    } else {
-        const spacer = document.createElement("span");
-        spacer.className = "folder-toggle-spacer";
-        spacer.setAttribute("aria-hidden", "true");
-        row.appendChild(spacer);
-    }
+    const isExpanded = hasChildren ? state.expandedPaths.has(nodePath) : false;
 
     const button = document.createElement("button");
     button.type = "button";
@@ -218,8 +369,12 @@ function makeFolderNode(node) {
         state.activeButton = null;
     }
 
-    const icon = document.createElement("span");
-    icon.textContent = node.hasVideos ? "●" : "○";
+    const folderGlyph = document.createElement("span");
+    folderGlyph.className = "folder-glyph";
+    folderGlyph.classList.add(hasChildren && isExpanded ? "folder-glyph-open" : "folder-glyph-closed");
+    if (hasChildren) {
+        folderGlyph.classList.add("folder-glyph-expandable");
+    }
 
     const label = document.createElement("span");
     label.textContent = node.name;
@@ -228,15 +383,26 @@ function makeFolderNode(node) {
     meta.className = "folder-meta";
     meta.textContent = node.videoCount > 0 ? `${node.videoCount} video${node.videoCount === 1 ? "" : "s"}` : "";
 
-    button.append(icon, label, meta);
+    button.append(folderGlyph, label, meta);
 
-    button.addEventListener("click", () => {
+    if (node.path === state.selectedFolder) {
+        button.classList.add("active");
+        state.activeButton = button;
+    }
+
+    button.addEventListener("click", (event) => {
+        if (hasChildren && event.target instanceof Element && event.target.closest(".folder-glyph")) {
+            toggleFolderExpanded(nodePath);
+            return;
+        }
+
         if (node.hasVideos) {
             if (state.activeButton) {
                 state.activeButton.classList.remove("active");
             }
             button.classList.add("active");
             state.activeButton = button;
+            queueFolderIntoView(nodePath);
             loadVideos(node.path, node.path === "" ? node.name : node.path);
             return;
         }
@@ -281,6 +447,7 @@ function renderFolderTree() {
 
     folderTreeEl.innerHTML = "";
     folderTreeEl.appendChild(makeFolderNode(state.folderTree));
+    flushPendingFolderScroll();
 }
 
 async function loadConfig() {
@@ -383,10 +550,37 @@ if (toggleSidebarBtn) {
     });
 }
 
+function enforceInlinePlayback() {
+    videoPlayer.setAttribute("playsinline", "");
+    videoPlayer.setAttribute("webkit-playsinline", "");
+
+    try {
+        if (typeof videoPlayer.webkitSetPresentationMode === "function") {
+            videoPlayer.webkitSetPresentationMode("inline");
+        } else if (typeof videoPlayer.webkitSupportsPresentationMode === "function" && videoPlayer.webkitSupportsPresentationMode("inline")) {
+            videoPlayer.webkitPresentationMode = "inline";
+        }
+    } catch (_error) {
+        // Some browsers expose partial WebKit APIs that can throw.
+    }
+}
+
+videoPlayer.addEventListener("webkitbeginfullscreen", () => {
+    if (typeof videoPlayer.webkitExitFullscreen === "function") {
+        videoPlayer.webkitExitFullscreen();
+    }
+    enforceInlinePlayback();
+});
+
+videoPlayer.addEventListener("play", () => {
+    enforceInlinePlayback();
+});
+
 videoPlayer.addEventListener("play", () => {
     setSidebarCollapsed(true);
 });
 
+enforceInlinePlayback();
 setButtonsEnabled();
 populateStartVideoOptions();
 loadConfig();

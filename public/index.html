@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
         rel="stylesheet" />
+    <link rel="stylesheet" href="/vendor/plyr/plyr.css" />
     <link rel="stylesheet" href="/styles.css" />
 </head>
 
@@ -45,7 +46,8 @@
             </div>
 
             <div class="video-stage">
-                <video id="video-player" controls preload="metadata"></video>
+                <video id="video-player" playsinline webkit-playsinline x-webkit-airplay="allow"
+                    preload="metadata"></video>
                 <div id="empty-state" class="empty-state">
                     Choose a folder from the left to build a video carousel.
                 </div>
@@ -64,6 +66,7 @@
         </section>
     </main>
 
+    <script src="/vendor/plyr/plyr.polyfilled.js"></script>
     <script src="/app.js"></script>
 </body>
 

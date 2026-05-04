@@ -147,35 +147,7 @@ body.sidebar-collapsed .sidebar {
 .folder-row {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-}
-
-.folder-toggle,
-.folder-toggle-spacer {
-  width: 1.7rem;
-  min-width: 1.7rem;
-  height: 1.7rem;
-}
-
-.folder-toggle {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  cursor: pointer;
-  color: var(--ink);
-  font-size: 0.8rem;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.folder-toggle:hover {
-  background: rgba(90, 200, 168, 0.24);
-}
-
-.folder-toggle-spacer {
-  display: inline-block;
+  gap: 0.2rem;
 }
 
 .folder-button {
@@ -191,6 +163,48 @@ body.sidebar-collapsed .sidebar {
   border-radius: 10px;
   cursor: pointer;
   transition: background-color 180ms ease;
+}
+
+.folder-glyph {
+  width: 1.05rem;
+  min-width: 1.05rem;
+  height: 0.9rem;
+  display: inline-block;
+  background-color: #9bb1d4;
+  opacity: 0.94;
+  transition:
+    background-color 180ms ease,
+    opacity 180ms ease;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.folder-button.active .folder-glyph {
+  background-color: var(--accent);
+}
+
+.folder-button:hover .folder-glyph-expandable,
+.folder-button:focus-visible .folder-glyph-expandable {
+  background-color: #d0def4;
+  opacity: 1;
+}
+
+.folder-glyph-expandable {
+  cursor: pointer;
+}
+
+.folder-glyph-closed {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 8.2a2 2 0 0 1 2-2h4.2l1.7 1.9h7a2 2 0 0 1 2 2v7.7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z' fill='none' stroke='%23000' stroke-width='1.9' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 8.2a2 2 0 0 1 2-2h4.2l1.7 1.9h7a2 2 0 0 1 2 2v7.7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z' fill='none' stroke='%23000' stroke-width='1.9' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.folder-glyph-open {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 9a2 2 0 0 1 2-2h4.1l1.6 1.9h7.1a2 2 0 0 1 1.9 2.5l-1.1 5.6a2 2 0 0 1-2 1.6H5.9a2 2 0 0 1-2-1.6L2.8 11.5A2 2 0 0 1 4.7 9z' fill='none' stroke='%23000' stroke-width='1.9' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 9a2 2 0 0 1 2-2h4.1l1.6 1.9h7.1a2 2 0 0 1 1.9 2.5l-1.1 5.6a2 2 0 0 1-2 1.6H5.9a2 2 0 0 1-2-1.6L2.8 11.5A2 2 0 0 1 4.7 9z' fill='none' stroke='%23000' stroke-width='1.9' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .folder-button:disabled {
@@ -262,6 +276,35 @@ video {
   width: 100%;
   max-height: 64vh;
   background: #000;
+}
+
+.video-stage .plyr {
+  min-height: 360px;
+  --plyr-color-main: var(--accent);
+  --plyr-video-control-color: var(--ink);
+  --plyr-video-control-color-hover: #101726;
+  --plyr-video-control-background-hover: rgba(255, 184, 77, 0.92);
+  --plyr-video-controls-background: linear-gradient(
+    180deg,
+    rgba(4, 7, 13, 0) 0%,
+    rgba(4, 7, 13, 0.88) 100%
+  );
+  --plyr-range-fill-background: var(--accent);
+  --plyr-tooltip-background: rgba(255, 255, 255, 0.96);
+  --plyr-tooltip-color: #141922;
+}
+
+.video-stage .plyr__video-wrapper {
+  background: #000;
+}
+
+.video-stage .plyr video {
+  max-height: 64vh;
+  object-fit: contain;
+}
+
+.video-stage .plyr--video {
+  border-radius: 14px;
 }
 
 .empty-state {
@@ -380,6 +423,10 @@ video {
     min-height: 240px;
   }
 
+  .video-stage .plyr {
+    min-height: 240px;
+  }
+
   .viewer-header {
     align-items: stretch;
   }
@@ -397,6 +444,24 @@ video {
   .app-header p {
     font-size: 0.78rem;
     word-break: break-all;
+  }
+
+  .video-stage .plyr video,
+  video {
+    max-height: 52vh;
+  }
+
+  .video-stage .plyr__controls {
+    padding: 0.45rem;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controls button {
+    min-width: 0;
   }
 
   .card {

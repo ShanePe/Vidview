@@ -14,7 +14,16 @@ fi
 : "${PORT:=3000}"
 export PORT
 
+APP_VERSION="${APP_BUILD_VERSION:-}"
+
+if [ -z "$APP_VERSION" ] && [ -f /app/package.json ]; then
+  APP_VERSION=$(node -p "require('/app/package.json').version" 2>/dev/null || true)
+fi
+
+: "${APP_VERSION:=unknown}"
+
 echo "Starting vid-view"
+echo "BUILD_VERSION=${APP_VERSION}"
 echo "BASE_VIDEO_FOLDER=${BASE_VIDEO_FOLDER}"
 echo "PORT=${PORT}"
 

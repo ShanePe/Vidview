@@ -12,6 +12,7 @@ Point it at a base folder, browse subfolders on the left, and play videos from t
 - Lets you choose a custom starting video in a folder
 - Supports Previous and Next navigation (non-looping)
 - Auto-plays when moving to another video
+- Uses a custom inline player on mobile so playback does not immediately force fullscreen
 - Collapses the left panel when playback starts, with a button to reopen it
 - Works on desktop and mobile (including swipe navigation)
 
