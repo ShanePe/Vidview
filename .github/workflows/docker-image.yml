@@ -10,6 +10,7 @@ permissions:
 
 env:
   IMAGE_NAME: vidview
+  CONTAINER_NAME: vidview
 
 jobs:
   build-and-push:
@@ -48,6 +49,7 @@ jobs:
     steps:
       - name: Trigger Portainer redeploy webhook
         env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           PORTAINER_WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK }}
         shell: bash
         run: |
@@ -58,9 +60,17 @@ jobs:
             exit 1
           fi
 
+          image="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+          payload=$(jq -n \
+            --arg image "$image" \
+            --arg container "$CONTAINER_NAME" \
+            '{image: $image, metadata: {ctn_names: $container}}')
+
           status=$(curl --silent --show-error --output /dev/null \
             --write-out "%{http_code}" \
             --request POST \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
             "$PORTAINER_WEBHOOK")
 
           if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
