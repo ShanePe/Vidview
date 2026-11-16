@@ -1,6 +1,6 @@
 {
   "name": "vid-view",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Folder-based video browser and carousel",
   "main": "server.js",
   "scripts": {
