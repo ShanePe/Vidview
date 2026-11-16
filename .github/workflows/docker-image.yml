@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: vid-view
-  CONTAINER_NAME: vid-view
+  IMAGE_NAME: vidview
+  CONTAINER_NAME: vidview
 
 jobs:
   build-and-push:
